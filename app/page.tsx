@@ -1,6 +1,7 @@
+import CanvasContainer from '@/components/CanvasContainer'
+
 export default function Home() {
   return (
-    <main>
-    </main>
+    <CanvasContainer />
   )
 }
