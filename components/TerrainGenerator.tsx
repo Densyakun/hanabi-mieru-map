@@ -1,13 +1,13 @@
 'use client'
 
-import { useSnapshot } from "valtio"
 import { location } from "./GlobeControls"
-import { useEffect, useState } from "react"
-import { BufferAttribute } from "three"
+import { useRef } from "react"
+import { BufferAttribute, Mesh } from "three"
 import { radius } from "@/lib/planet"
 import SphericalMercator from "@mapbox/sphericalmercator"
+import { useFrame } from "@react-three/fiber"
 
-const zoom = 6
+const zoom = 8
 let tileX = 0
 let tileY = 0
 
@@ -19,110 +19,109 @@ var merc = new SphericalMercator({
 })
 
 export default function TerrainGenerator() {
-  const { lat, lon } = useSnapshot(location)
+  const meshRef = useRef<Mesh>(null!)
 
-  const [heightmap, setHeightmap] = useState<number[][]>([])
-  const [vertices, setVertices] = useState(new Float32Array())
-
-  useEffect(() => {
-    let [x, y] = merc.px([lon, lat], zoom)
+  useFrame(() => {
+    let [x, y] = merc.px([location.lon, location.lat], zoom)
       .map((value: number) => Math.floor(value / 256))
 
     if (y < 0 || (2 ** zoom <= y)) return
 
-    if (x !== tileX) tileX = x
-    if (y !== tileY) tileY = y
-  }, [lat, lon])
+    if (x === tileX && y === tileY) return
+    tileX = x
+    tileY = y
 
-  useEffect(() => {
     fetch(`https://cyberjapandata.gsi.go.jp/xyz/demgm/${zoom}/${tileX}/${tileY}.txt`)
       .then(async res => {
         const text = await res.text()
 
-        setHeightmap(text.split("\n").slice(0, tileSize).map(line =>
+        const heightmap: number[][] = text.split("\n").slice(0, tileSize).map(line =>
           line.split(",").map(point => point === "e" ? NaN : parseInt(point))
-        ))
-      })
-  }, [tileX, tileY])
+        )
 
-  useEffect(() => {
-    if (!heightmap.length) return
+        if (!heightmap.length) return
 
-    const newVertices = new Float32Array((tileSize + 1 - 2) ** 2 * 2 * 3 * 3)
-    for (let x = 0; x <= tileSize - 2; x++) {
-      for (let y = 0; y <= tileSize - 2; y++) {
-        const i = (y * (tileSize - 1) + x) * 2 * 3 * 3
+        const vertices = new Float32Array((tileSize + 1 - 2) ** 2 * 2 * 3 * 3)
+        for (let x = 0; x <= tileSize - 2; x++) {
+          for (let y = 0; y <= tileSize - 2; y++) {
+            const i = (y * (tileSize - 1) + x) * 2 * 3 * 3
 
-        const isNaN =
-          Number.isNaN(heightmap[y + 1][x])
-          || Number.isNaN(heightmap[y + 1][x + 1])
-          || Number.isNaN(heightmap[y][x + 1])
-          || Number.isNaN(heightmap[y][x])
+            const isNaN =
+              Number.isNaN(heightmap[y + 1][x])
+              || Number.isNaN(heightmap[y + 1][x + 1])
+              || Number.isNaN(heightmap[y][x + 1])
+              || Number.isNaN(heightmap[y][x])
 
-        if (isNaN) {
-          newVertices[i] =
-            newVertices[i + 1] =
-            newVertices[i + 2] =
-            newVertices[i + 3] =
-            newVertices[i + 4] =
-            newVertices[i + 5] =
-            newVertices[i + 6] =
-            newVertices[i + 7] =
-            newVertices[i + 8] =
-            newVertices[i + 9] =
-            newVertices[i + 10] =
-            newVertices[i + 11] =
-            newVertices[i + 12] =
-            newVertices[i + 13] =
-            newVertices[i + 14] =
-            newVertices[i + 15] =
-            newVertices[i + 16] =
-            newVertices[i + 17] = 0
-        } else {
-          const h0 = (radius + heightmap[y + 1][x]) / radius
-          const h1 = (radius + heightmap[y + 1][x + 1]) / radius
-          const h2 = (radius + heightmap[y][x + 1]) / radius
-          const h3 = (radius + heightmap[y][x]) / radius
+            if (isNaN) {
+              vertices[i] =
+                vertices[i + 1] =
+                vertices[i + 2] =
+                vertices[i + 3] =
+                vertices[i + 4] =
+                vertices[i + 5] =
+                vertices[i + 6] =
+                vertices[i + 7] =
+                vertices[i + 8] =
+                vertices[i + 9] =
+                vertices[i + 10] =
+                vertices[i + 11] =
+                vertices[i + 12] =
+                vertices[i + 13] =
+                vertices[i + 14] =
+                vertices[i + 15] =
+                vertices[i + 16] =
+                vertices[i + 17] = 0
+            } else {
+              const h0 = (radius + heightmap[y + 1][x]) / radius
+              const h1 = (radius + heightmap[y + 1][x + 1]) / radius
+              const h2 = (radius + heightmap[y][x + 1]) / radius
+              const h3 = (radius + heightmap[y][x]) / radius
 
-          const [lon0, lat0] = merc.ll([tileX * 256 + x, tileY * 256 + y], zoom)
-          const [lon1, lat1] = merc.ll([tileX * 256 + x + 1, tileY * 256 + y + 1], zoom)
+              const [lon0, lat0] = merc.ll([tileX * 256 + x, tileY * 256 + y], zoom)
+              const [lon1, lat1] = merc.ll([tileX * 256 + x + 1, tileY * 256 + y + 1], zoom)
 
-          const a0 = lon0 * Math.PI / 180
-          const a1 = lon1 * Math.PI / 180
+              const a0 = lon0 * Math.PI / 180
+              const a1 = lon1 * Math.PI / 180
 
-          const b0 = lat0 * Math.PI / 180
-          const b1 = lat1 * Math.PI / 180
+              const b0 = lat0 * Math.PI / 180
+              const b1 = lat1 * Math.PI / 180
 
-          newVertices[i] =
-            newVertices[i + 15] = Math.cos(a0) * Math.cos(b1) * h0
-          newVertices[i + 1] =
-            newVertices[i + 16] = Math.sin(b1) * h0
-          newVertices[i + 2] =
-            newVertices[i + 17] = -Math.sin(a0) * Math.cos(b1) * h0
+              vertices[i] =
+                vertices[i + 15] = Math.cos(a0) * Math.cos(b1) * h0
+              vertices[i + 1] =
+                vertices[i + 16] = Math.sin(b1) * h0
+              vertices[i + 2] =
+                vertices[i + 17] = -Math.sin(a0) * Math.cos(b1) * h0
 
-          newVertices[i + 3] = Math.cos(a1) * Math.cos(b1) * h1
-          newVertices[i + 4] = Math.sin(b1) * h1
-          newVertices[i + 5] = -Math.sin(a1) * Math.cos(b1) * h1
+              vertices[i + 3] = Math.cos(a1) * Math.cos(b1) * h1
+              vertices[i + 4] = Math.sin(b1) * h1
+              vertices[i + 5] = -Math.sin(a1) * Math.cos(b1) * h1
 
-          newVertices[i + 6] =
-            newVertices[i + 9] = Math.cos(a1) * Math.cos(b0) * h2
-          newVertices[i + 7] =
-            newVertices[i + 10] = Math.sin(b0) * h2
-          newVertices[i + 8] =
-            newVertices[i + 11] = -Math.sin(a1) * Math.cos(b0) * h2
+              vertices[i + 6] =
+                vertices[i + 9] = Math.cos(a1) * Math.cos(b0) * h2
+              vertices[i + 7] =
+                vertices[i + 10] = Math.sin(b0) * h2
+              vertices[i + 8] =
+                vertices[i + 11] = -Math.sin(a1) * Math.cos(b0) * h2
 
-          newVertices[i + 12] = Math.cos(a0) * Math.cos(b0) * h3
-          newVertices[i + 13] = Math.sin(b0) * h3
-          newVertices[i + 14] = -Math.sin(a0) * Math.cos(b0) * h3
+              vertices[i + 12] = Math.cos(a0) * Math.cos(b0) * h3
+              vertices[i + 13] = Math.sin(b0) * h3
+              vertices[i + 14] = -Math.sin(a0) * Math.cos(b0) * h3
+            }
+          }
         }
-      }
-    }
-    setVertices(newVertices)
-  }, [heightmap])
+
+        const { geometry } = meshRef.current
+        const { position } = geometry.attributes
+        position.array.set(vertices)
+        position.needsUpdate = true
+        geometry.computeVertexNormals()
+      })
+  })
 
   return (
-    <mesh>
-      <bufferGeometry onUpdate={self => self.computeVertexNormals()} attributes={{ "position": new BufferAttribute(vertices, 3) }} />
+    <mesh ref={meshRef}>
+      <bufferGeometry attributes={{ "position": new BufferAttribute(new Float32Array((tileSize + 1 - 2) ** 2 * 2 * 3 * 3), 3) }} />
       <meshStandardMaterial />
     </mesh>
   )
