@@ -8,8 +8,8 @@ import SphericalMercator from "@mapbox/sphericalmercator"
 import { useFrame } from "@react-three/fiber"
 
 const zoom = 8
-let tileX = -1
-let tileY = -1
+let currentTileX = -1
+let currentTileY = -1
 
 const tileSize = 256
 
@@ -31,19 +31,12 @@ export default function TerrainGenerator() {
     geometry.computeVertexNormals()
   }
 
-  useFrame(() => {
-    let [x, y] = merc.px([location.lon, location.lat], zoom)
-      .map((value: number) => Math.floor(value / 256))
-
-    if (y < 0 || (2 ** zoom <= y)) return
-
-    if (x === tileX && y === tileY) return
-    tileX = x
-    tileY = y
-
+  function fetchTile(tileX: number, tileY: number) {
     fetch(`https://cyberjapandata.gsi.go.jp/xyz/demgm/${zoom}/${tileX}/${tileY}.txt`)
       .then(async res => {
         const text = await res.text()
+
+        if (tileX !== currentTileX || tileY !== currentTileY) return
 
         const heightmap: number[][] = text.split("\n").slice(0, tileSize).map(line =>
           line.split(",").map(point => point === "e" ? NaN : parseInt(point))
@@ -122,6 +115,19 @@ export default function TerrainGenerator() {
 
         applyMesh()
       })
+  }
+
+  useFrame(() => {
+    let [newTileX, newTileY] = merc.px([location.lon, location.lat], zoom)
+      .map((value: number) => Math.floor(value / 256))
+
+    if (newTileY < 0 || (2 ** zoom <= newTileY)) return
+
+    if (newTileX === currentTileX && newTileY === currentTileY) return
+    currentTileX = newTileX
+    currentTileY = newTileY
+
+    fetchTile(newTileX, newTileY)
   })
 
   useEffect(applyMesh)
