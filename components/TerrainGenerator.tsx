@@ -1,15 +1,15 @@
 'use client'
 
 import { location } from "./GlobeControls"
-import { useRef } from "react"
-import { BufferAttribute, Mesh } from "three"
-import { radius } from "@/lib/planet"
+import { useEffect, useRef } from "react"
+import { BufferAttribute, DoubleSide, Mesh } from "three"
+import { radius, scale } from "@/lib/planet"
 import SphericalMercator from "@mapbox/sphericalmercator"
 import { useFrame } from "@react-three/fiber"
 
 const zoom = 8
-let tileX = 0
-let tileY = 0
+let tileX = -1
+let tileY = -1
 
 const tileSize = 256
 
@@ -20,6 +20,16 @@ var merc = new SphericalMercator({
 
 export default function TerrainGenerator() {
   const meshRef = useRef<Mesh>(null!)
+
+  const vertices = useRef(new Float32Array((tileSize + 1 - 2) ** 2 * 2 * 3 * 3))
+
+  const applyMesh = () => {
+    const { geometry } = meshRef.current
+    const { position } = geometry.attributes
+    position.array.set(vertices.current)
+    position.needsUpdate = true
+    geometry.computeVertexNormals()
+  }
 
   useFrame(() => {
     let [x, y] = merc.px([location.lon, location.lat], zoom)
@@ -41,7 +51,6 @@ export default function TerrainGenerator() {
 
         if (!heightmap.length) return
 
-        const vertices = new Float32Array((tileSize + 1 - 2) ** 2 * 2 * 3 * 3)
         for (let x = 0; x <= tileSize - 2; x++) {
           for (let y = 0; y <= tileSize - 2; y++) {
             const i = (y * (tileSize - 1) + x) * 2 * 3 * 3
@@ -53,24 +62,24 @@ export default function TerrainGenerator() {
               || Number.isNaN(heightmap[y][x])
 
             if (isNaN) {
-              vertices[i] =
-                vertices[i + 1] =
-                vertices[i + 2] =
-                vertices[i + 3] =
-                vertices[i + 4] =
-                vertices[i + 5] =
-                vertices[i + 6] =
-                vertices[i + 7] =
-                vertices[i + 8] =
-                vertices[i + 9] =
-                vertices[i + 10] =
-                vertices[i + 11] =
-                vertices[i + 12] =
-                vertices[i + 13] =
-                vertices[i + 14] =
-                vertices[i + 15] =
-                vertices[i + 16] =
-                vertices[i + 17] = 0
+              vertices.current[i] =
+                vertices.current[i + 1] =
+                vertices.current[i + 2] =
+                vertices.current[i + 3] =
+                vertices.current[i + 4] =
+                vertices.current[i + 5] =
+                vertices.current[i + 6] =
+                vertices.current[i + 7] =
+                vertices.current[i + 8] =
+                vertices.current[i + 9] =
+                vertices.current[i + 10] =
+                vertices.current[i + 11] =
+                vertices.current[i + 12] =
+                vertices.current[i + 13] =
+                vertices.current[i + 14] =
+                vertices.current[i + 15] =
+                vertices.current[i + 16] =
+                vertices.current[i + 17] = 0
             } else {
               const h0 = (radius + heightmap[y + 1][x]) / radius
               const h1 = (radius + heightmap[y + 1][x + 1]) / radius
@@ -86,43 +95,41 @@ export default function TerrainGenerator() {
               const b0 = lat0 * Math.PI / 180
               const b1 = lat1 * Math.PI / 180
 
-              vertices[i] =
-                vertices[i + 15] = Math.cos(a0) * Math.cos(b1) * h0
-              vertices[i + 1] =
-                vertices[i + 16] = Math.sin(b1) * h0
-              vertices[i + 2] =
-                vertices[i + 17] = -Math.sin(a0) * Math.cos(b1) * h0
+              vertices.current[i] =
+                vertices.current[i + 15] = Math.cos(a0) * Math.cos(b1) * h0 * scale
+              vertices.current[i + 1] =
+                vertices.current[i + 16] = Math.sin(b1) * h0 * scale
+              vertices.current[i + 2] =
+                vertices.current[i + 17] = -Math.sin(a0) * Math.cos(b1) * h0 * scale
 
-              vertices[i + 3] = Math.cos(a1) * Math.cos(b1) * h1
-              vertices[i + 4] = Math.sin(b1) * h1
-              vertices[i + 5] = -Math.sin(a1) * Math.cos(b1) * h1
+              vertices.current[i + 3] = Math.cos(a1) * Math.cos(b1) * h1 * scale
+              vertices.current[i + 4] = Math.sin(b1) * h1 * scale
+              vertices.current[i + 5] = -Math.sin(a1) * Math.cos(b1) * h1 * scale
 
-              vertices[i + 6] =
-                vertices[i + 9] = Math.cos(a1) * Math.cos(b0) * h2
-              vertices[i + 7] =
-                vertices[i + 10] = Math.sin(b0) * h2
-              vertices[i + 8] =
-                vertices[i + 11] = -Math.sin(a1) * Math.cos(b0) * h2
+              vertices.current[i + 6] =
+                vertices.current[i + 9] = Math.cos(a1) * Math.cos(b0) * h2 * scale
+              vertices.current[i + 7] =
+                vertices.current[i + 10] = Math.sin(b0) * h2 * scale
+              vertices.current[i + 8] =
+                vertices.current[i + 11] = -Math.sin(a1) * Math.cos(b0) * h2 * scale
 
-              vertices[i + 12] = Math.cos(a0) * Math.cos(b0) * h3
-              vertices[i + 13] = Math.sin(b0) * h3
-              vertices[i + 14] = -Math.sin(a0) * Math.cos(b0) * h3
+              vertices.current[i + 12] = Math.cos(a0) * Math.cos(b0) * h3 * scale
+              vertices.current[i + 13] = Math.sin(b0) * h3 * scale
+              vertices.current[i + 14] = -Math.sin(a0) * Math.cos(b0) * h3 * scale
             }
           }
         }
 
-        const { geometry } = meshRef.current
-        const { position } = geometry.attributes
-        position.array.set(vertices)
-        position.needsUpdate = true
-        geometry.computeVertexNormals()
+        applyMesh()
       })
   })
 
+  useEffect(applyMesh)
+
   return (
-    <mesh ref={meshRef}>
-      <bufferGeometry attributes={{ "position": new BufferAttribute(new Float32Array((tileSize + 1 - 2) ** 2 * 2 * 3 * 3), 3) }} />
-      <meshStandardMaterial />
+    <mesh castShadow receiveShadow ref={meshRef}>
+      <bufferGeometry attributes={{ "position": new BufferAttribute(vertices.current, 3) }} />
+      <meshStandardMaterial shadowSide={DoubleSide} />
     </mesh>
   )
 }

@@ -8,10 +8,9 @@ export function getLon(position: Vector3) {
   return Math.atan2(position.z || 0, position.x || 0) * -180 / Math.PI
 }
 
-export function setLocation(position: Vector3, latitude: number, longitude: number) {
+export function setLocation(position: Vector3, latitude: number, longitude: number, radius = position.length()) {
   const a = latitude * Math.PI / 180
   const b = longitude * Math.PI / 180
-  const radius = position.length()
 
   position.set(
     Math.cos(b) * Math.cos(a) * radius,

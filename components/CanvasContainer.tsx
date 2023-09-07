@@ -1,17 +1,17 @@
 'use client'
 
 import { Canvas } from '@react-three/fiber'
+import HanabiPointLight from './HanabiPointLight'
 import TerrainGenerator from './TerrainGenerator'
 import CameraAndControls from './CameraAndControls'
 
 export default function CanvasContainer() {
   return (
     <div id="canvas-container">
-      <Canvas>
+      <Canvas shadows>
         <CameraAndControls />
-        <ambientLight intensity={0.1} />
-        <directionalLight />
         <TerrainGenerator />
+        <HanabiPointLight />
       </Canvas>
     </div>
   )

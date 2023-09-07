@@ -6,6 +6,7 @@ import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { getLat, getLon, setLocation } from '@/lib/location'
 import { useSnapshot } from 'valtio'
+import { scale } from '@/lib/planet'
 
 export default function CameraAndControls() {
   const cameraRef = useRef<THREE.PerspectiveCamera>(null!)
@@ -20,7 +21,7 @@ export default function CameraAndControls() {
   }, [cameraRef.current])
 
   return <>
-    <PerspectiveCamera makeDefault ref={cameraRef} near={0.001} position={[0, 0, 2]} />
+    <PerspectiveCamera makeDefault ref={cameraRef} near={0.001 * scale} position={[0, 0, 2 * scale]} />
     <GlobeControls camera={cameraRef.current} />
   </>
 }
