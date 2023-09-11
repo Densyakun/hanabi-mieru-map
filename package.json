@@ -26,6 +26,7 @@
     "valtio": "^1.11.2"
   },
   "devDependencies": {
-    "@types/mapbox__sphericalmercator": "^1.2.0"
+    "@types/mapbox__sphericalmercator": "^1.2.0",
+    "@types/three": "^0.156.0"
   }
 }
